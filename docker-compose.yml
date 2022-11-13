@@ -1,0 +1,32 @@
+services:
+    backend:
+        build: ./
+        ports:
+            - "80:8080"
+        depends_on:
+            - mariadb
+    mariadb:
+        image: mariadb:10.4
+        ports:
+            - "3306"
+        environment:
+            - MARIADB_USER=taco
+            - MARIADB_PASSWORD=tacotacotaco
+            - MARIADB_ROOT_PASSWORD=rootrootroot
+    unittests:
+        image: golang:1.19-alpine3.16
+        command: go test -tags=unit ./...
+        environment:
+            - CGO_ENABLED=0
+        working_dir: /code
+        volumes:
+            - ./:/code
+    integrationtests:
+        image: golang:1.19-alpine3.16
+        command: go test -tags=integration ./...
+        environment:
+            - CGO_ENABLED=0
+        working_dir: /code
+        volumes:
+            - ./:/code
+
