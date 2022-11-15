@@ -10,6 +10,11 @@ docker-compose up -d
 Endpoints:
 - webserver: `http://localhost:80`
 - database: random port run `docker-compose ps mariadb` for more details
+## Required Tooling
+- golang 1.18+
+- [mockery](https://github.com/vektra/mockery)
+- docker
+- docker compose
 ## Tests
 To run the unit tests run the following command:
 ```sh
