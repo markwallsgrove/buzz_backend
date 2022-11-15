@@ -10,7 +10,7 @@ services:
     mariadb:
         image: mariadb:10.4
         ports:
-            - "3306"
+            - "3306:3306"
         environment:
             - MARIADB_USER=taco
             - MARIADB_PASSWORD=tacotacotaco

@@ -30,7 +30,7 @@ type MariaDB struct {
 
 func (d *MariaDB) CreateUser(ctx context.Context, user models.User) error {
 	return d.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Omit("id").Create(user).Error; err != nil {
+		if err := tx.Omit("id").Create(&user).Error; err != nil {
 			d.Logger.Error("cannot create user", zap.Error(err))
 			return err
 		}

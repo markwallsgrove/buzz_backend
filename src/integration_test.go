@@ -1,12 +1,16 @@
 //go:build integration
 
-package main
+package main_tests
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestMain(m *testing.M) {
-	fmt.Println("tested integration")
-}
+// TODO: fix if enough time
+// func TestCreateUser(m *testing.T) {
+// 	resp, err := http.Get("http://backend/users/create")
+// 	assert.NotError(t, err)
+// 	assert.NotNil(t, resp)
+// }
