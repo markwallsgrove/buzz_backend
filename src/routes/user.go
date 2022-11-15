@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	randomdata "github.com/Pallinder/go-randomdata"
 	echo "github.com/labstack/echo/v4"
@@ -134,4 +135,44 @@ func (u *UserController) Profiles(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, models.Results{Results: users})
+}
+
+// Create a swipe between two users. The swipe will contain who swiped.
+//
+// Query Params:
+//   - currentUser the user who is swiping
+//   - targetUser who the user has swiped
+//
+// Status codes:
+//   - 500 internal server error
+//   - 200 success
+func (u *UserController) Swipe(c echo.Context) error {
+	currentUserId, err := strconv.Atoi(c.QueryParam("currentUser"))
+	if err != nil {
+		return c.String(http.StatusBadRequest, "current user is not numeric")
+	}
+
+	targetUserId, err := strconv.Atoi(c.QueryParam("targetUser"))
+	if err != nil {
+		return c.String(http.StatusBadRequest, "target user is not numeric")
+	}
+
+	swipe, err := u.Database.Swipe(u.Ctx, currentUserId, targetUserId)
+	if err != nil {
+		u.Logger.Error("cannot create swipe", zap.Error(err))
+		return c.String(http.StatusInternalServerError, "internal server error")
+	}
+
+	swipeResult := &models.SwipeResult{
+		Matched: false,
+	}
+
+	if swipe.FirstUserSwiped && swipe.SecondUserSwiped {
+		swipeResult.ID = swipe.ID
+		swipeResult.Matched = true
+	}
+
+	return c.JSON(http.StatusOK, models.SwipeResults{
+		Results: *swipeResult,
+	})
 }

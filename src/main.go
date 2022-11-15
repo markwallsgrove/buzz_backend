@@ -33,6 +33,7 @@ func main() {
 	e.GET("/", i.Index)
 	e.POST("/user/create", u.CreateUser)
 	e.GET("/profiles", u.Profiles)
+	e.POST("/swipe", u.Swipe)
 
 	// Handle any signals to close the application. The connection to the database
 	// must be cleanly closed.

@@ -19,6 +19,38 @@ CREATE OR REPLACE DATABASE dating;
 use dating;
 
 --
+-- Table structure for table `swipes`
+--
+
+DROP TABLE IF EXISTS `swipes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `swipes` (
+  `first_user_id` int(11) NOT NULL,
+  `second_user_id` int(11) NOT NULL,
+  `first_user_swiped` tinyint(1) NOT NULL,
+  `second_user_swiped` tinyint(1) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `swipes_UN` (`first_user_id`,`second_user_id`),
+  KEY `swipes_FK_1` (`second_user_id`),
+  KEY `swipes_firstUserId_IDX` (`first_user_id`,`second_user_id`) USING BTREE,
+  CONSTRAINT `swipes_FK` FOREIGN KEY (`first_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `swipes_FK_1` FOREIGN KEY (`second_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `swipes`
+--
+
+LOCK TABLES `swipes` WRITE;
+/*!40000 ALTER TABLE `swipes` DISABLE KEYS */;
+INSERT INTO `swipes` VALUES (24,26,1,1,20);
+/*!40000 ALTER TABLE `swipes` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `users`
 --
 
@@ -61,4 +93,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-11-15 16:01:09
+-- Dump completed on 2022-11-15 19:33:08

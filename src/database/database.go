@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var ErrNotFound = errors.New("Cannot find resource")
@@ -22,6 +23,16 @@ type Database interface {
 		minAge int,
 		maxAge int,
 	) ([]models.UserProfile, error)
+	GetSwipe(
+		ctx context.Context,
+		firstUserId int,
+		secondUserId int,
+	) (models.Swipe, error)
+	Swipe(
+		ctx context.Context,
+		firstUserId int,
+		secondUserId int,
+	) (models.Swipe, error)
 	Close() error
 }
 
@@ -97,6 +108,85 @@ func (d *MariaDB) FindMatches(
 	}
 
 	return profiles, nil
+}
+
+// Swipe create a new swipe which details which user (if not both) swipped
+func (d *MariaDB) Swipe(
+	ctx context.Context,
+	firstUserId int,
+	secondUserId int,
+) (models.Swipe, error) {
+	// Ensure the records have a predictable index by ordering the user ids.
+	// If we do not order the IDs between the columns we might get duplicates.
+	var updatesOnConflict map[string]interface{}
+	var swipe models.Swipe
+
+	if firstUserId < secondUserId {
+		updatesOnConflict = map[string]interface{}{
+			"first_user_swiped": true,
+		}
+		swipe = models.Swipe{
+			FirstUserID:      firstUserId,
+			SecondUserID:     secondUserId,
+			FirstUserSwiped:  true,
+			SecondUserSwiped: false,
+		}
+	} else {
+		updatesOnConflict = map[string]interface{}{
+			"second_user_swiped": true,
+		}
+		swipe = models.Swipe{
+			FirstUserID:      secondUserId,
+			SecondUserID:     firstUserId,
+			FirstUserSwiped:  false,
+			SecondUserSwiped: true,
+		}
+	}
+
+	// If the update fails because a swipe already exists the record will be
+	// updated to show the current user swiped.
+	//
+	// If a record does not already exist it will be created.
+	result := d.db.Clauses(clause.OnConflict{
+		DoUpdates: clause.Assignments(updatesOnConflict),
+	}).Create(&swipe)
+
+	if result.Error != nil {
+		d.Logger.Error("cannot update/create swipe", zap.Error(result.Error))
+		return models.Swipe{}, result.Error
+	}
+
+	return d.GetSwipe(ctx, firstUserId, secondUserId)
+}
+
+// GetSwipe retrieve a swipe by the two user ids
+func (d *MariaDB) GetSwipe(
+	ctx context.Context,
+	firstUserId int,
+	secondUserId int,
+) (models.Swipe, error) {
+	// We must use the ids in the correct order else we might not
+	// be able to find the record.
+	fuid := firstUserId
+	suid := secondUserId
+
+	if fuid > suid {
+		t := suid
+		suid = fuid
+		fuid = t
+	}
+
+	var swipe models.Swipe
+	result := d.db.
+		Where("first_user_id = ? AND second_user_id = ?", fuid, suid).
+		Find(&swipe)
+
+	if result.Error != nil && result.RowsAffected == 0 {
+		d.Logger.Error("cannot retrieve swipe", zap.Error(result.Error))
+		return models.Swipe{}, result.Error
+	}
+
+	return swipe, nil
 }
 
 func (d *MariaDB) Close() error {

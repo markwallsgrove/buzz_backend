@@ -132,3 +132,76 @@ func TestUsersProfiles(t *testing.T) {
 	assert.Equal(t, 15, call.Arguments.Get(2))
 	assert.Equal(t, 25, call.Arguments.Get(3))
 }
+
+func TestSwipe(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/swipe?currentUser=9&targetUser=10", strings.NewReader(""))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	db := &mocks.Database{}
+
+	db.On("Swipe", mock.AnythingOfType("*context.emptyCtx"), 9, 10).Return(
+		models.Swipe{
+			ID:               11,
+			FirstUserID:      9,
+			SecondUserID:     10,
+			FirstUserSwiped:  true,
+			SecondUserSwiped: false,
+		},
+		nil,
+	)
+
+	users := routes.UserController{
+		db,
+		zap.NewNop(),
+		context.Background(),
+	}
+
+	assert.NoError(t, users.Swipe(c))
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var result models.Results
+	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &result))
+	swipe := result.Results.(models.SwipeResult)
+
+	assert.False(t, swipe.Matched)
+}
+
+func TestSwipeMatched(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/swipe?currentUser=9&targetUser=10", strings.NewReader(""))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	db := &mocks.Database{}
+
+	db.On("Swipe", mock.AnythingOfType("*context.emptyCtx"), 9, 10).Return(
+		models.Swipe{
+			ID:               11,
+			FirstUserID:      9,
+			SecondUserID:     10,
+			FirstUserSwiped:  true,
+			SecondUserSwiped: true,
+		},
+		nil,
+	)
+
+	users := routes.UserController{
+		db,
+		zap.NewNop(),
+		context.Background(),
+	}
+
+	assert.NoError(t, users.Swipe(c))
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var result models.SwipeResults
+	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &result))
+	swipe := result.Results
+
+	assert.Equal(t, 11, swipe.ID)
+	assert.True(t, swipe.Matched)
+}

@@ -73,6 +73,27 @@ func (_m *Database) FindMatches(ctx context.Context, gender models.Gender, minAg
 	return r0, r1
 }
 
+// GetSwipe provides a mock function with given fields: ctx, firstUserId, secondUserId
+func (_m *Database) GetSwipe(ctx context.Context, firstUserId int, secondUserId int) (models.Swipe, error) {
+	ret := _m.Called(ctx, firstUserId, secondUserId)
+
+	var r0 models.Swipe
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) models.Swipe); ok {
+		r0 = rf(ctx, firstUserId, secondUserId)
+	} else {
+		r0 = ret.Get(0).(models.Swipe)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
+		r1 = rf(ctx, firstUserId, secondUserId)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetUser provides a mock function with given fields: ctx, id
 func (_m *Database) GetUser(ctx context.Context, id string) (models.User, error) {
 	ret := _m.Called(ctx, id)
@@ -87,6 +108,27 @@ func (_m *Database) GetUser(ctx context.Context, id string) (models.User, error)
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Swipe provides a mock function with given fields: ctx, firstUserId, secondUserId
+func (_m *Database) Swipe(ctx context.Context, firstUserId int, secondUserId int) (models.Swipe, error) {
+	ret := _m.Called(ctx, firstUserId, secondUserId)
+
+	var r0 models.Swipe
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) models.Swipe); ok {
+		r0 = rf(ctx, firstUserId, secondUserId)
+	} else {
+		r0 = ret.Get(0).(models.Swipe)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
+		r1 = rf(ctx, firstUserId, secondUserId)
 	} else {
 		r1 = ret.Error(1)
 	}
