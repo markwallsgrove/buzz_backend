@@ -33,11 +33,12 @@ CREATE TABLE `swipes` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (`id`),
   UNIQUE KEY `swipes_UN` (`first_user_id`,`second_user_id`),
-  KEY `swipes_FK_1` (`second_user_id`),
   KEY `swipes_firstUserId_IDX` (`first_user_id`,`second_user_id`) USING BTREE,
+  KEY `swipes_first_user_id_IDX` (`first_user_id`,`first_user_swiped`) USING BTREE,
+  KEY `swipes_second_user_id_IDX` (`second_user_id`,`second_user_swiped`) USING BTREE,
   CONSTRAINT `swipes_FK` FOREIGN KEY (`first_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `swipes_FK_1` FOREIGN KEY (`second_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -46,7 +47,7 @@ CREATE TABLE `swipes` (
 
 LOCK TABLES `swipes` WRITE;
 /*!40000 ALTER TABLE `swipes` DISABLE KEYS */;
-INSERT INTO `swipes` VALUES (24,26,1,1,20);
+INSERT INTO `swipes` VALUES (24,26,1,1,20),(17,24,1,1,26);
 /*!40000 ALTER TABLE `swipes` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -93,4 +94,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-11-15 19:33:08
+-- Dump completed on 2022-11-15 22:24:07

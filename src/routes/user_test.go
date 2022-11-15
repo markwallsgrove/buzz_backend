@@ -30,8 +30,10 @@ func TestUsersRoute(t *testing.T) {
 	db.On(
 		"CreateUser",
 		mock.AnythingOfType("*context.emptyCtx"),
-		mock.AnythingOfType("models.User"),
-	).Return(nil)
+		mock.AnythingOfType("*models.User"),
+	).Return(
+		nil,
+	)
 
 	users := routes.UserController{
 		db,
@@ -48,7 +50,7 @@ func TestUsersRoute(t *testing.T) {
 	call := db.Calls[0]
 	assert.Equal(t, "CreateUser", call.Method)
 
-	user := call.Arguments.Get(1).(models.User)
+	user := call.Arguments.Get(1).(*models.User)
 	assert.GreaterOrEqual(t, user.Age, 13)
 	assert.LessOrEqual(t, user.Age, 100)
 	assert.NotEmpty(t, user.Email)
@@ -57,17 +59,17 @@ func TestUsersRoute(t *testing.T) {
 	assert.GreaterOrEqual(t, user.Gender, models.UnknownGender)
 
 	// Check the user data that was encoded in the HTTP response body
-	var results models.Result
+	var results models.UserResult
 	assert.NoError(t, json.Unmarshal([]byte(rec.Body.String()), &results))
 
-	result := results.Result.(models.User)
+	result := results.Result
 	assert.Equal(t, user.Age, result.Age)
 	assert.Equal(t, user.Email, result.Email)
 	assert.Equal(t, user.Name, result.Name)
 	assert.Equal(t, user.Gender, result.Gender)
 
 	// should not return the hash which was sent to the database
-	assert.NotEqual(t, user.Password, result.Password)
+	assert.NotEmpty(t, result.Password)
 	assert.NotEmpty(t, result.Password)
 }
 
@@ -100,12 +102,13 @@ func TestUsersProfiles(t *testing.T) {
 	db.On(
 		"GetUser",
 		mock.AnythingOfType("*context.emptyCtx"),
-		"9",
+		9,
 	).Return(user, nil)
 
 	db.On(
 		"FindMatches",
 		mock.AnythingOfType("*context.emptyCtx"),
+		9,
 		models.Gender(models.Female),
 		15,
 		25,
@@ -123,14 +126,15 @@ func TestUsersProfiles(t *testing.T) {
 	// check how the GetUser call to the database was called
 	call := db.Calls[0]
 	assert.Equal(t, "GetUser", call.Method)
-	assert.Equal(t, "9", call.Arguments.Get(1))
+	assert.Equal(t, 9, call.Arguments.Get(1))
 
 	// check how the FindMatches call to the database was called
 	call = db.Calls[1]
 	assert.Equal(t, "FindMatches", call.Method)
-	assert.Equal(t, models.Gender(models.Female), call.Arguments.Get(1))
-	assert.Equal(t, 15, call.Arguments.Get(2))
-	assert.Equal(t, 25, call.Arguments.Get(3))
+	assert.Equal(t, 9, call.Arguments.Get(1))
+	assert.Equal(t, models.Gender(models.Female), call.Arguments.Get(2))
+	assert.Equal(t, 15, call.Arguments.Get(3))
+	assert.Equal(t, 25, call.Arguments.Get(4))
 }
 
 func TestSwipe(t *testing.T) {
@@ -162,9 +166,9 @@ func TestSwipe(t *testing.T) {
 	assert.NoError(t, users.Swipe(c))
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	var result models.Results
+	var result models.SwipeResults
 	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &result))
-	swipe := result.Results.(models.SwipeResult)
+	swipe := result.Results
 
 	assert.False(t, swipe.Matched)
 }

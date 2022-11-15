@@ -28,10 +28,14 @@ type UserProfile struct {
 	Age    int    `json:"age"`
 }
 
-type Result struct {
-	Result interface{} `json:"result"`
+type UserResult struct {
+	Result User `json:"result"`
 }
 
-type Results struct {
-	Results interface{} `json:"results"`
+type UserResults struct {
+	Results []User `json:"results"`
+}
+
+type UserProfileResults struct {
+	Results []UserProfile `json:"results"`
 }

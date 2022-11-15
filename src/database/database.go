@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"errors"
-	"strconv"
 
 	"github.com/markwallsgrove/muzz_devops/src/models"
 	"go.uber.org/zap"
@@ -15,10 +14,11 @@ import (
 var ErrNotFound = errors.New("Cannot find resource")
 
 type Database interface {
-	CreateUser(ctx context.Context, user models.User) (models.User, error)
-	GetUser(ctx context.Context, id string) (models.User, error)
+	CreateUser(ctx context.Context, user *models.User) error
+	GetUser(ctx context.Context, id int) (models.User, error)
 	FindMatches(
 		ctx context.Context,
+		currentUserId int,
 		gender models.Gender,
 		minAge int,
 		maxAge int,
@@ -53,7 +53,7 @@ type MariaDB struct {
 
 // CreateUser create a new user. The ID will be ignored as it's automatically generated &
 // the email address must be unique.
-func (d *MariaDB) CreateUser(ctx context.Context, user models.User) (models.User, error) {
+func (d *MariaDB) CreateUser(ctx context.Context, user *models.User) error {
 	err := d.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Omit("id").Create(&user).Error; err != nil {
 			d.Logger.Error("cannot create user", zap.Error(err))
@@ -63,18 +63,12 @@ func (d *MariaDB) CreateUser(ctx context.Context, user models.User) (models.User
 		return nil
 	})
 
-	return user, err
+	return err
 }
 
 // GetUser find a user by their id
-func (d *MariaDB) GetUser(ctx context.Context, id string) (models.User, error) {
+func (d *MariaDB) GetUser(ctx context.Context, id int) (models.User, error) {
 	var user models.User
-
-	// check if user id is numeric
-	if _, err := strconv.Atoi(id); err != nil {
-		d.Logger.Error("user id is not numeric", zap.Error(err))
-		return models.User{}, err
-	}
 
 	results := d.db.Find(&user, id)
 	if results.Error != nil {
@@ -92,16 +86,25 @@ func (d *MariaDB) GetUser(ctx context.Context, id string) (models.User, error) {
 // FindMatches find potenial matches
 func (d *MariaDB) FindMatches(
 	ctx context.Context,
+	currentUserId int,
 	gender models.Gender,
 	minAge int,
 	maxAge int,
 ) ([]models.UserProfile, error) {
 	var profiles []models.UserProfile
 
-	results := d.db.
-		Model(&models.User{}).
-		Where("age >= ? AND age <= ? AND gender = ?", minAge, maxAge, gender).
-		Find(&profiles)
+	results := d.db.Raw(
+		"SELECT * FROM dating.users u WHERE u.id != ? AND u.id NOT IN (? UNION ?)",
+		currentUserId,
+		d.db.
+			Table("dating.swipes s1").
+			Select("s1.second_user_id as id").
+			Where("s1.first_user_id = ? AND s1.first_user_swiped = TRUE", currentUserId),
+		d.db.
+			Table("dating.swipes s2").
+			Select("s2.first_user_id as id").
+			Where("s2.second_user_id = ? AND s2.second_user_swiped = TRUE", currentUserId),
+	).Scan(&profiles)
 
 	if results.Error != nil {
 		return []models.UserProfile{}, results.Error

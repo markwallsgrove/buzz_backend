@@ -57,7 +57,7 @@ func (u *UserController) CreateUser(c echo.Context) error {
 	lastName := randomdata.LastName()
 	age := randomdata.Number(13, 100)
 
-	user := models.User{
+	user := &models.User{
 		Email:    fmt.Sprintf("%s.%s@gmail.com", firstName, lastName),
 		Password: hash,
 		Name:     fmt.Sprintf("%s %s", firstName, lastName),
@@ -65,15 +65,15 @@ func (u *UserController) CreateUser(c echo.Context) error {
 		Age:      age,
 	}
 
-	user, err = u.Database.CreateUser(u.Ctx, user)
+	err = u.Database.CreateUser(u.Ctx, user)
 	if err != nil {
 		return err
 	}
 
 	// return the password back to the user rather than the hash
 	user.Password = password
-	results := models.Result{
-		Result: &user,
+	results := models.UserResult{
+		Result: *user,
 	}
 
 	err = c.JSON(http.StatusOK, results)
@@ -103,9 +103,12 @@ func (u *UserController) CreateUser(c echo.Context) error {
 // All matches will be within five years of the current user's age, unless
 // the value is below 13 or above 100.
 func (u *UserController) Profiles(c echo.Context) error {
-	userId := c.QueryParam("userId")
-	user, err := u.Database.GetUser(u.Ctx, userId)
+	uid, err := strconv.Atoi(c.QueryParam("userId"))
+	if err != nil {
+		return c.String(http.StatusBadRequest, "current user is not numeric")
+	}
 
+	user, err := u.Database.GetUser(u.Ctx, uid)
 	if err == database.ErrNotFound {
 		return c.String(http.StatusNotFound, "user not found")
 	}
@@ -129,12 +132,12 @@ func (u *UserController) Profiles(c echo.Context) error {
 		maxAge = 100
 	}
 
-	users, err := u.Database.FindMatches(u.Ctx, models.Gender(gender), minAge, maxAge)
+	users, err := u.Database.FindMatches(u.Ctx, uid, models.Gender(gender), minAge, maxAge)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 
-	return c.JSON(http.StatusOK, models.Results{Results: users})
+	return c.JSON(http.StatusOK, models.UserProfileResults{Results: users})
 }
 
 // Create a swipe between two users. The swipe will contain who swiped.
