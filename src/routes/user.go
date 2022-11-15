@@ -56,7 +56,7 @@ func (u *UserController) CreateUser(c echo.Context) error {
 	lastName := randomdata.LastName()
 	age := randomdata.Number(13, 100)
 
-	user := &models.User{
+	user := models.User{
 		Email:    fmt.Sprintf("%s.%s@gmail.com", firstName, lastName),
 		Password: hash,
 		Name:     fmt.Sprintf("%s %s", firstName, lastName),
@@ -64,14 +64,15 @@ func (u *UserController) CreateUser(c echo.Context) error {
 		Age:      age,
 	}
 
-	if err = u.Database.CreateUser(u.Ctx, *user); err != nil {
+	user, err = u.Database.CreateUser(u.Ctx, user)
+	if err != nil {
 		return err
 	}
 
 	// return the password back to the user rather than the hash
 	user.Password = password
 	results := models.Results{
-		Result: user,
+		Result: &user,
 	}
 
 	err = c.JSON(http.StatusOK, results)

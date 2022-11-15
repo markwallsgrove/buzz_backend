@@ -10,7 +10,7 @@ import (
 )
 
 type Database interface {
-	CreateUser(ctx context.Context, user models.User) error
+	CreateUser(ctx context.Context, user models.User) (models.User, error)
 	Close() error
 }
 
@@ -28,8 +28,8 @@ type MariaDB struct {
 	Logger *zap.Logger
 }
 
-func (d *MariaDB) CreateUser(ctx context.Context, user models.User) error {
-	return d.db.Transaction(func(tx *gorm.DB) error {
+func (d *MariaDB) CreateUser(ctx context.Context, user models.User) (models.User, error) {
+	err := d.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Omit("id").Create(&user).Error; err != nil {
 			d.Logger.Error("cannot create user", zap.Error(err))
 			return err
@@ -37,6 +37,8 @@ func (d *MariaDB) CreateUser(ctx context.Context, user models.User) error {
 
 		return nil
 	})
+
+	return user, err
 }
 
 func (d *MariaDB) Close() error {
