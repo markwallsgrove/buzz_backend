@@ -71,7 +71,7 @@ func (u *UserController) CreateUser(c echo.Context) error {
 
 	// return the password back to the user rather than the hash
 	user.Password = password
-	results := models.Results{
+	results := models.Result{
 		Result: &user,
 	}
 
@@ -86,4 +86,52 @@ func (u *UserController) CreateUser(c echo.Context) error {
 	}
 
 	return err
+}
+
+// Profiles fetch profiles that are matched to the current user.
+//
+// Query Params:
+//   - userId (must be numeric)
+//
+// Status codes:
+//   - 404 user was not found
+//   - 500 internal server error
+//   - 200 results
+//
+// Matching two users is based on their age difference and the opposite sex.
+// All matches will be within five years of the current user's age, unless
+// the value is below 13 or above 100.
+func (u *UserController) Profiles(c echo.Context) error {
+	userId := c.QueryParam("userId")
+	user, err := u.Database.GetUser(u.Ctx, userId)
+
+	if err == database.ErrNotFound {
+		return c.String(http.StatusNotFound, "user not found")
+	}
+	if err != nil {
+		u.Logger.Error("cannot find user for profiles", zap.Error(err))
+		return c.String(http.StatusInternalServerError, "internal server error")
+	}
+
+	gender := models.Female
+	if user.Gender == models.Female {
+		gender = models.Male
+	}
+
+	minAge := user.Age - 5
+	if minAge < 13 {
+		minAge = 13
+	}
+
+	maxAge := user.Age + 5
+	if maxAge > 100 {
+		maxAge = 100
+	}
+
+	users, err := u.Database.FindMatches(u.Ctx, models.Gender(gender), minAge, maxAge)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "internal server error")
+	}
+
+	return c.JSON(http.StatusOK, models.Results{Results: users})
 }

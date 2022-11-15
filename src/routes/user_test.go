@@ -57,15 +57,78 @@ func TestUsersRoute(t *testing.T) {
 	assert.GreaterOrEqual(t, user.Gender, models.UnknownGender)
 
 	// Check the user data that was encoded in the HTTP response body
-	var results models.Results
+	var results models.Result
 	assert.NoError(t, json.Unmarshal([]byte(rec.Body.String()), &results))
 
-	assert.Equal(t, user.Age, results.Result.Age)
-	assert.Equal(t, user.Email, results.Result.Email)
-	assert.Equal(t, user.Name, results.Result.Name)
-	assert.Equal(t, user.Gender, results.Result.Gender)
+	result := results.Result.(models.User)
+	assert.Equal(t, user.Age, result.Age)
+	assert.Equal(t, user.Email, result.Email)
+	assert.Equal(t, user.Name, result.Name)
+	assert.Equal(t, user.Gender, result.Gender)
 
 	// should not return the hash which was sent to the database
-	assert.NotEqual(t, user.Password, results.Result.Password)
-	assert.NotEmpty(t, results.Result.Password)
+	assert.NotEqual(t, user.Password, result.Password)
+	assert.NotEmpty(t, result.Password)
+}
+
+func TestUsersProfiles(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/profiles?userId=9", strings.NewReader(""))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	db := &mocks.Database{}
+
+	user := models.User{
+		ID:     9,
+		Email:  "foo.bar@example.com",
+		Name:   "foo bar",
+		Gender: models.Male,
+		Age:    20,
+	}
+
+	profiles := []models.UserProfile{
+		{
+			ID:     1,
+			Name:   "Ann Thompson",
+			Gender: models.Female,
+			Age:    17,
+		},
+	}
+
+	db.On(
+		"GetUser",
+		mock.AnythingOfType("*context.emptyCtx"),
+		"9",
+	).Return(user, nil)
+
+	db.On(
+		"FindMatches",
+		mock.AnythingOfType("*context.emptyCtx"),
+		models.Gender(models.Female),
+		15,
+		25,
+	).Return(profiles, nil)
+
+	users := routes.UserController{
+		db,
+		zap.NewNop(),
+		context.Background(),
+	}
+
+	assert.NoError(t, users.Profiles(c))
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// check how the GetUser call to the database was called
+	call := db.Calls[0]
+	assert.Equal(t, "GetUser", call.Method)
+	assert.Equal(t, "9", call.Arguments.Get(1))
+
+	// check how the FindMatches call to the database was called
+	call = db.Calls[1]
+	assert.Equal(t, "FindMatches", call.Method)
+	assert.Equal(t, models.Gender(models.Female), call.Arguments.Get(1))
+	assert.Equal(t, 15, call.Arguments.Get(2))
+	assert.Equal(t, 25, call.Arguments.Get(3))
 }

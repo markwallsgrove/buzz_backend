@@ -32,6 +32,7 @@ func main() {
 	e := echo.New()
 	e.GET("/", i.Index)
 	e.POST("/user/create", u.CreateUser)
+	e.GET("/profiles", u.Profiles)
 
 	// Handle any signals to close the application. The connection to the database
 	// must be cleanly closed.

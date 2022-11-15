@@ -21,6 +21,17 @@ type User struct {
 	Age      int    `json:"age"`
 }
 
+type UserProfile struct {
+	ID     int    `json:"id"`
+	Name   string `json:"name"`
+	Gender Gender `json:"gender"`
+	Age    int    `json:"age"`
+}
+
+type Result struct {
+	Result interface{} `json:"result"`
+}
+
 type Results struct {
-	Result *User `json:"result"`
+	Results interface{} `json:"results"`
 }
