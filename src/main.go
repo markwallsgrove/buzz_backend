@@ -27,6 +27,12 @@ func main() {
 	ctx, close := context.WithCancel(context.Background())
 	u := routes.NewUserController(ctx, db, logger)
 	i := routes.IndexController{}
+	l := routes.LoginController{
+		Ctx:      ctx,
+		Database: db,
+		Logger:   logger,
+		Secret:   "token secret",
+	}
 
 	// Register the handlers with echo
 	e := echo.New()
@@ -34,6 +40,7 @@ func main() {
 	e.POST("/user/create", u.CreateUser)
 	e.GET("/profiles", u.Profiles)
 	e.POST("/swipe", u.Swipe)
+	e.POST("/login", l.Login)
 
 	// Handle any signals to close the application. The connection to the database
 	// must be cleanly closed.

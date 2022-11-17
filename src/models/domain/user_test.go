@@ -1,23 +1,23 @@
 //go:build !integration
 // +build !integration
 
-package models_test
+package domain_test
 
 import (
 	"testing"
 
-	"github.com/markwallsgrove/muzz_devops/src/models"
+	"github.com/markwallsgrove/muzz_devops/src/models/domain"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGender(t *testing.T) {
 	tests := []struct {
-		gender models.Gender
+		gender domain.Gender
 		str    string
 	}{
-		{gender: models.Female, str: "Female"},
-		{gender: models.UnknownGender, str: "Unknown"},
-		{gender: models.Male, str: "Male"},
+		{gender: domain.Female, str: "Female"},
+		{gender: domain.UnknownGender, str: "Unknown"},
+		{gender: domain.Male, str: "Male"},
 	}
 
 	for _, test := range tests {

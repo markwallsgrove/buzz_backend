@@ -1,17 +1,17 @@
 //go:build !integration
 // +build !integration
 
-package models_test
+package security_test
 
 import (
 	"testing"
 
-	"github.com/markwallsgrove/muzz_devops/src/models"
+	"github.com/markwallsgrove/muzz_devops/src/models/security"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateRandomPassword(t *testing.T) {
-	password, err := models.CreateRandomPassword()
+	password, err := security.CreateRandomPassword()
 	assert.Nil(t, err)
 	assert.Len(t, password, 21)
 }
@@ -26,9 +26,9 @@ func TestCreatePasswordHash(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		hash, err := models.CreatePasswordHash(test.password)
+		hash, err := security.CreatePasswordHash(test.password)
 		assert.Nil(t, err)
-		assert.Len(t, hash, 32)
+		assert.NotEmpty(t, hash)
 	}
 
 }

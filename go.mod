@@ -17,6 +17,7 @@ require (
 
 require (
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/goombaio/namegenerator v0.0.0-20181006234301-989e774b106e
 	github.com/jinzhu/gorm v1.9.16
 	github.com/labstack/echo/v4 v4.9.1 // indirect

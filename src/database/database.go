@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/markwallsgrove/muzz_devops/src/models"
+	"github.com/markwallsgrove/muzz_devops/src/models/domain"
 	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -14,25 +14,29 @@ import (
 var ErrNotFound = errors.New("Cannot find resource")
 
 type Database interface {
-	CreateUser(ctx context.Context, user *models.User) error
-	GetUser(ctx context.Context, id int) (models.User, error)
+	CreateUser(ctx context.Context, user *domain.User) error
+	GetUser(ctx context.Context, id int) (domain.User, error)
 	FindMatches(
 		ctx context.Context,
 		currentUserId int,
-		gender models.Gender,
+		gender domain.Gender,
 		minAge int,
 		maxAge int,
-	) ([]models.UserProfile, error)
+	) ([]domain.UserProfile, error)
 	GetSwipe(
 		ctx context.Context,
 		firstUserId int,
 		secondUserId int,
-	) (models.Swipe, error)
+	) (domain.Swipe, error)
 	Swipe(
 		ctx context.Context,
 		firstUserId int,
 		secondUserId int,
-	) (models.Swipe, error)
+	) (domain.Swipe, error)
+	GetUserPasswordHash(
+		ctx context.Context,
+		email string,
+	) ([]byte, error)
 	Close() error
 }
 
@@ -53,7 +57,7 @@ type MariaDB struct {
 
 // CreateUser create a new user. The ID will be ignored as it's automatically generated &
 // the email address must be unique.
-func (d *MariaDB) CreateUser(ctx context.Context, user *models.User) error {
+func (d *MariaDB) CreateUser(ctx context.Context, user *domain.User) error {
 	err := d.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Omit("id").Create(&user).Error; err != nil {
 			d.Logger.Error("cannot create user", zap.Error(err))
@@ -67,17 +71,17 @@ func (d *MariaDB) CreateUser(ctx context.Context, user *models.User) error {
 }
 
 // GetUser find a user by their id
-func (d *MariaDB) GetUser(ctx context.Context, id int) (models.User, error) {
-	var user models.User
+func (d *MariaDB) GetUser(ctx context.Context, id int) (domain.User, error) {
+	var user domain.User
 
 	results := d.db.Find(&user, id)
 	if results.Error != nil {
 		d.Logger.Error("cannot find user", zap.Error(results.Error))
-		return models.User{}, results.Error
+		return domain.User{}, results.Error
 	}
 
 	if results.RowsAffected != 1 {
-		return models.User{}, ErrNotFound
+		return domain.User{}, ErrNotFound
 	}
 
 	return user, nil
@@ -87,11 +91,11 @@ func (d *MariaDB) GetUser(ctx context.Context, id int) (models.User, error) {
 func (d *MariaDB) FindMatches(
 	ctx context.Context,
 	currentUserId int,
-	gender models.Gender,
+	gender domain.Gender,
 	minAge int,
 	maxAge int,
-) ([]models.UserProfile, error) {
-	var profiles []models.UserProfile
+) ([]domain.UserProfile, error) {
+	var profiles []domain.UserProfile
 
 	results := d.db.Raw(
 		"SELECT * FROM dating.users u WHERE u.id != ? AND u.id NOT IN (? UNION ?)",
@@ -107,7 +111,7 @@ func (d *MariaDB) FindMatches(
 	).Scan(&profiles)
 
 	if results.Error != nil {
-		return []models.UserProfile{}, results.Error
+		return []domain.UserProfile{}, results.Error
 	}
 
 	return profiles, nil
@@ -118,17 +122,17 @@ func (d *MariaDB) Swipe(
 	ctx context.Context,
 	firstUserId int,
 	secondUserId int,
-) (models.Swipe, error) {
+) (domain.Swipe, error) {
 	// Ensure the records have a predictable index by ordering the user ids.
 	// If we do not order the IDs between the columns we might get duplicates.
 	var updatesOnConflict map[string]interface{}
-	var swipe models.Swipe
+	var swipe domain.Swipe
 
 	if firstUserId < secondUserId {
 		updatesOnConflict = map[string]interface{}{
 			"first_user_swiped": true,
 		}
-		swipe = models.Swipe{
+		swipe = domain.Swipe{
 			FirstUserID:      firstUserId,
 			SecondUserID:     secondUserId,
 			FirstUserSwiped:  true,
@@ -138,7 +142,7 @@ func (d *MariaDB) Swipe(
 		updatesOnConflict = map[string]interface{}{
 			"second_user_swiped": true,
 		}
-		swipe = models.Swipe{
+		swipe = domain.Swipe{
 			FirstUserID:      secondUserId,
 			SecondUserID:     firstUserId,
 			FirstUserSwiped:  false,
@@ -156,7 +160,7 @@ func (d *MariaDB) Swipe(
 
 	if result.Error != nil {
 		d.Logger.Error("cannot update/create swipe", zap.Error(result.Error))
-		return models.Swipe{}, result.Error
+		return domain.Swipe{}, result.Error
 	}
 
 	return d.GetSwipe(ctx, firstUserId, secondUserId)
@@ -167,7 +171,7 @@ func (d *MariaDB) GetSwipe(
 	ctx context.Context,
 	firstUserId int,
 	secondUserId int,
-) (models.Swipe, error) {
+) (domain.Swipe, error) {
 	// We must use the ids in the correct order else we might not
 	// be able to find the record.
 	fuid := firstUserId
@@ -179,17 +183,38 @@ func (d *MariaDB) GetSwipe(
 		fuid = t
 	}
 
-	var swipe models.Swipe
+	var swipe domain.Swipe
 	result := d.db.
 		Where("first_user_id = ? AND second_user_id = ?", fuid, suid).
 		Find(&swipe)
 
 	if result.Error != nil && result.RowsAffected == 0 {
 		d.Logger.Error("cannot retrieve swipe", zap.Error(result.Error))
-		return models.Swipe{}, result.Error
+		return domain.Swipe{}, result.Error
 	}
 
 	return swipe, nil
+}
+
+// GetPasswordHash retrieve the password hash related to a user
+func (d *MariaDB) GetUserPasswordHash(ctx context.Context, email string) ([]byte, error) {
+	var passwords [][]byte
+
+	result := d.db.
+		Table("users").
+		Where("email = ?", email).
+		Pluck("password_hash", &passwords)
+
+	if result.Error != nil {
+		d.Logger.Error("cannot find user", zap.Error(result.Error))
+		return []byte{}, result.Error
+	}
+
+	if result.RowsAffected != 1 || len(passwords) != 1 {
+		return []byte{}, ErrNotFound
+	}
+
+	return passwords[0], nil
 }
 
 func (d *MariaDB) Close() error {

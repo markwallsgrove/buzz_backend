@@ -9,7 +9,8 @@ import (
 	"testing"
 
 	echo "github.com/labstack/echo/v4"
-	"github.com/markwallsgrove/muzz_devops/src/models"
+	"github.com/markwallsgrove/muzz_devops/src/models/domain"
+	"github.com/markwallsgrove/muzz_devops/src/models/httpDomain"
 	"github.com/markwallsgrove/muzz_devops/src/routes"
 	"github.com/markwallsgrove/muzz_devops/src/routes/mocks"
 	"github.com/stretchr/testify/assert"
@@ -30,7 +31,7 @@ func TestUsersRoute(t *testing.T) {
 	db.On(
 		"CreateUser",
 		mock.AnythingOfType("*context.emptyCtx"),
-		mock.AnythingOfType("*models.User"),
+		mock.AnythingOfType("*domain.User"),
 	).Return(
 		nil,
 	)
@@ -50,23 +51,23 @@ func TestUsersRoute(t *testing.T) {
 	call := db.Calls[0]
 	assert.Equal(t, "CreateUser", call.Method)
 
-	user := call.Arguments.Get(1).(*models.User)
+	user := call.Arguments.Get(1).(*domain.User)
 	assert.GreaterOrEqual(t, user.Age, 13)
 	assert.LessOrEqual(t, user.Age, 100)
 	assert.NotEmpty(t, user.Email)
 	assert.NotEmpty(t, user.Name)
 	assert.NotEmpty(t, user.Password)
-	assert.GreaterOrEqual(t, user.Gender, models.UnknownGender)
+	assert.GreaterOrEqual(t, user.Gender, domain.UnknownGender)
 
 	// Check the user data that was encoded in the HTTP response body
-	var results models.UserResult
+	var results httpDomain.UserResult
 	assert.NoError(t, json.Unmarshal([]byte(rec.Body.String()), &results))
 
 	result := results.Result
 	assert.Equal(t, user.Age, result.Age)
 	assert.Equal(t, user.Email, result.Email)
 	assert.Equal(t, user.Name, result.Name)
-	assert.Equal(t, user.Gender, result.Gender)
+	assert.Equal(t, "Female", result.Gender)
 
 	// should not return the hash which was sent to the database
 	assert.NotEmpty(t, result.Password)
@@ -82,19 +83,19 @@ func TestUsersProfiles(t *testing.T) {
 
 	db := &mocks.Database{}
 
-	user := models.User{
+	user := domain.User{
 		ID:     9,
 		Email:  "foo.bar@example.com",
 		Name:   "foo bar",
-		Gender: models.Male,
+		Gender: domain.Male,
 		Age:    20,
 	}
 
-	profiles := []models.UserProfile{
+	profiles := []domain.UserProfile{
 		{
 			ID:     1,
 			Name:   "Ann Thompson",
-			Gender: models.Female,
+			Gender: domain.Female,
 			Age:    17,
 		},
 	}
@@ -109,7 +110,7 @@ func TestUsersProfiles(t *testing.T) {
 		"FindMatches",
 		mock.AnythingOfType("*context.emptyCtx"),
 		9,
-		models.Gender(models.Female),
+		domain.Gender(domain.Female),
 		15,
 		25,
 	).Return(profiles, nil)
@@ -132,7 +133,7 @@ func TestUsersProfiles(t *testing.T) {
 	call = db.Calls[1]
 	assert.Equal(t, "FindMatches", call.Method)
 	assert.Equal(t, 9, call.Arguments.Get(1))
-	assert.Equal(t, models.Gender(models.Female), call.Arguments.Get(2))
+	assert.Equal(t, domain.Gender(domain.Female), call.Arguments.Get(2))
 	assert.Equal(t, 15, call.Arguments.Get(3))
 	assert.Equal(t, 25, call.Arguments.Get(4))
 }
@@ -147,7 +148,7 @@ func TestSwipe(t *testing.T) {
 	db := &mocks.Database{}
 
 	db.On("Swipe", mock.AnythingOfType("*context.emptyCtx"), 9, 10).Return(
-		models.Swipe{
+		domain.Swipe{
 			ID:               11,
 			FirstUserID:      9,
 			SecondUserID:     10,
@@ -166,7 +167,7 @@ func TestSwipe(t *testing.T) {
 	assert.NoError(t, users.Swipe(c))
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	var result models.SwipeResults
+	var result httpDomain.SwipeResults
 	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &result))
 	swipe := result.Results
 
@@ -183,7 +184,7 @@ func TestSwipeMatched(t *testing.T) {
 	db := &mocks.Database{}
 
 	db.On("Swipe", mock.AnythingOfType("*context.emptyCtx"), 9, 10).Return(
-		models.Swipe{
+		domain.Swipe{
 			ID:               11,
 			FirstUserID:      9,
 			SecondUserID:     10,
@@ -202,7 +203,7 @@ func TestSwipeMatched(t *testing.T) {
 	assert.NoError(t, users.Swipe(c))
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	var result models.SwipeResults
+	var result httpDomain.SwipeResults
 	assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &result))
 	swipe := result.Results
 

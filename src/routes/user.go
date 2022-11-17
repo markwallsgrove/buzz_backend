@@ -9,7 +9,9 @@ import (
 	randomdata "github.com/Pallinder/go-randomdata"
 	echo "github.com/labstack/echo/v4"
 	"github.com/markwallsgrove/muzz_devops/src/database"
-	"github.com/markwallsgrove/muzz_devops/src/models"
+	"github.com/markwallsgrove/muzz_devops/src/models/domain"
+	"github.com/markwallsgrove/muzz_devops/src/models/httpDomain"
+	"github.com/markwallsgrove/muzz_devops/src/models/security"
 	"go.uber.org/zap"
 )
 
@@ -32,37 +34,37 @@ type UserController struct {
 // CreateUser create a new random user & return the model
 // as a JSON blob within the body.
 func (u *UserController) CreateUser(c echo.Context) error {
-	password, err := models.CreateRandomPassword()
+	password, err := security.CreateRandomPassword()
 	if err != nil {
 		u.Logger.Error("cannot create password", zap.Error(err))
 		return err
 	}
 
-	hash, err := models.CreatePasswordHash(password)
+	hash, err := security.CreatePasswordHash(password)
 	if err != nil {
 		u.Logger.Error("cannot create hash", zap.Error(err))
 		return err
 	}
 
-	var gender models.Gender
+	var gender domain.Gender
 	var firstName string
 	if randomdata.Boolean() {
 		firstName = randomdata.FirstName(randomdata.Male)
-		gender = models.Male
+		gender = domain.Male
 	} else {
 		firstName = randomdata.FirstName(randomdata.Female)
-		gender = models.Female
+		gender = domain.Female
 	}
 
 	lastName := randomdata.LastName()
 	age := randomdata.Number(13, 100)
 
-	user := &models.User{
-		Email:    fmt.Sprintf("%s.%s@gmail.com", firstName, lastName),
-		Password: hash,
-		Name:     fmt.Sprintf("%s %s", firstName, lastName),
-		Gender:   gender,
-		Age:      age,
+	user := &domain.User{
+		Email:        fmt.Sprintf("%s.%s@gmail.com", firstName, lastName),
+		PasswordHash: hash,
+		Name:         fmt.Sprintf("%s %s", firstName, lastName),
+		Gender:       gender,
+		Age:          age,
 	}
 
 	err = u.Database.CreateUser(u.Ctx, user)
@@ -71,9 +73,8 @@ func (u *UserController) CreateUser(c echo.Context) error {
 	}
 
 	// return the password back to the user rather than the hash
-	user.Password = password
-	results := models.UserResult{
-		Result: *user,
+	results := httpDomain.UserResult{
+		Result: httpDomain.UserToHTTPDomain(user, password),
 	}
 
 	err = c.JSON(http.StatusOK, results)
@@ -117,9 +118,9 @@ func (u *UserController) Profiles(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 
-	gender := models.Female
-	if user.Gender == models.Female {
-		gender = models.Male
+	gender := domain.Female
+	if user.Gender == domain.Female {
+		gender = domain.Male
 	}
 
 	minAge := user.Age - 5
@@ -132,12 +133,12 @@ func (u *UserController) Profiles(c echo.Context) error {
 		maxAge = 100
 	}
 
-	users, err := u.Database.FindMatches(u.Ctx, uid, models.Gender(gender), minAge, maxAge)
+	userProfiles, err := u.Database.FindMatches(u.Ctx, uid, domain.Gender(gender), minAge, maxAge)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 
-	return c.JSON(http.StatusOK, models.UserProfileResults{Results: users})
+	return c.JSON(http.StatusOK, httpDomain.UserProfileResults{Results: userProfiles})
 }
 
 // Create a swipe between two users. The swipe will contain who swiped.
@@ -166,7 +167,7 @@ func (u *UserController) Swipe(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 
-	swipeResult := &models.SwipeResult{
+	swipeResult := &httpDomain.SwipeResult{
 		Matched: false,
 	}
 
@@ -175,7 +176,7 @@ func (u *UserController) Swipe(c echo.Context) error {
 		swipeResult.Matched = true
 	}
 
-	return c.JSON(http.StatusOK, models.SwipeResults{
+	return c.JSON(http.StatusOK, httpDomain.SwipeResults{
 		Results: *swipeResult,
 	})
 }
