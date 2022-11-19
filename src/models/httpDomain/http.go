@@ -36,7 +36,7 @@ func UserToHTTPDomain(user *domain.User, password string) User {
 }
 
 type SwipeResults struct {
-	Results SwipeResult
+	Results SwipeResult `json:"results"`
 }
 
 type SwipeResult struct {

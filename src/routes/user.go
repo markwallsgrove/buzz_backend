@@ -94,10 +94,18 @@ func (u *UserController) CreateUser(c echo.Context) error {
 
 // Profiles fetch profiles that are matched to the current user.
 //
+// Query parameters:
+//   - minAge integer minimum age for selected users
+//   - maxAge integer maximum age for selected users
+//   - gender string gender to filter by
+//
+// Authentication:
+//   - authorization header with bearer token
+//
 // Status codes:
 //   - 404 user was not found
 //   - 500 internal server error
-//   - 200 results
+//   - 200 user profiles result
 //
 // Matching two users is based on their age difference and the opposite sex.
 // All matches will be within five years of the current user's age, unless
@@ -145,6 +153,9 @@ func (u *UserController) Profiles(c echo.Context) error {
 //
 // Query Params:
 //   - targetUser who the user has swiped
+//
+// Authentication:
+//   - authorization header with bearer token
 //
 // Status codes:
 //   - 500 internal server error
