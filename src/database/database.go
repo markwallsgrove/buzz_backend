@@ -18,7 +18,7 @@ type Database interface {
 	GetUser(ctx context.Context, id int) (domain.User, error)
 	FindMatches(
 		ctx context.Context,
-		currentUserId int,
+		user *domain.User,
 		gender []domain.Gender,
 		minAge int,
 		maxAge int,
@@ -74,7 +74,7 @@ func (d *MariaDB) CreateUser(ctx context.Context, user *domain.User) error {
 func (d *MariaDB) GetUser(ctx context.Context, id int) (domain.User, error) {
 	var user domain.User
 
-	results := d.db.Find(&user, id)
+	results := d.db.Find(&user, "ID = ?", id)
 	if results.Error != nil {
 		d.Logger.Error("cannot find user", zap.Error(results.Error))
 		return domain.User{}, results.Error
@@ -90,24 +90,26 @@ func (d *MariaDB) GetUser(ctx context.Context, id int) (domain.User, error) {
 // FindMatches find potenial matches
 func (d *MariaDB) FindMatches(
 	ctx context.Context,
-	currentUserId int,
+	user *domain.User,
 	genders []domain.Gender,
 	minAge int,
 	maxAge int,
 ) ([]domain.UserProfile, error) {
-	var users []domain.User
+	var users []domain.UserDistance
 
 	results := d.db.Raw(
-		"SELECT * FROM dating.users u WHERE u.id != ? AND u.id NOT IN (? UNION ?) AND u.gender IN ? AND u.age >= ? AND u.age <= ?",
-		currentUserId,
+		"SELECT *, ST_DISTANCE(u.location, POINT(?, ?)) as distance FROM dating.users u WHERE u.id != ? AND u.id NOT IN (? UNION ?) AND u.gender IN ? AND u.age >= ? AND u.age <= ? ORDER by distance ASC",
+		user.Location.X,
+		user.Location.Y,
+		user.ID,
 		d.db.
 			Table("dating.swipes s1").
 			Select("s1.second_user_id as id").
-			Where("s1.first_user_id = ? AND s1.first_user_swiped = TRUE", currentUserId),
+			Where("s1.first_user_id = ? AND s1.first_user_swiped = TRUE", user.ID),
 		d.db.
 			Table("dating.swipes s2").
 			Select("s2.first_user_id as id").
-			Where("s2.second_user_id = ? AND s2.second_user_swiped = TRUE", currentUserId),
+			Where("s2.second_user_id = ? AND s2.second_user_swiped = TRUE", user.ID),
 		genders,
 		minAge,
 		maxAge,
@@ -120,10 +122,11 @@ func (d *MariaDB) FindMatches(
 	profiles := make([]domain.UserProfile, len(users))
 	for i, user := range users {
 		profiles[i] = domain.UserProfile{
-			ID:     user.ID,
-			Name:   user.Name,
-			Gender: user.Gender.String(),
-			Age:    user.Age,
+			ID:             user.ID,
+			Name:           user.Name,
+			Gender:         user.Gender.String(),
+			Age:            user.Age,
+			DistanceFromMe: user.Distance,
 		}
 	}
 

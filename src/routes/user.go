@@ -109,6 +109,16 @@ func (u *UserController) Profiles(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 
+	user, err := u.Database.GetUser(u.Ctx, uid)
+	if err == database.ErrNotFound {
+		u.Logger.Error("cannot find user", zap.Error(err))
+		return c.String(http.StatusNotFound, "cannot find user")
+	}
+	if err != nil {
+		u.Logger.Error("error attempting to find user", zap.Error(err))
+		return c.String(http.StatusInternalServerError, "internal server error")
+	}
+
 	var genders []domain.Gender
 	gender := domain.StringToGender(c.QueryParam("gender"))
 	if gender == domain.UnknownGender {
@@ -120,7 +130,7 @@ func (u *UserController) Profiles(c echo.Context) error {
 	minAge := models.StringToInt(c.QueryParam("minAge"), 0)
 	maxAge := models.StringToInt(c.QueryParam("maxAge"), 200)
 
-	userProfiles, err := u.Database.FindMatches(u.Ctx, uid, genders, minAge, maxAge)
+	userProfiles, err := u.Database.FindMatches(u.Ctx, &user, genders, minAge, maxAge)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}

@@ -2,11 +2,13 @@ package domain
 
 import (
 	"context"
-	"errors"
+	"encoding/binary"
 	"fmt"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+
+	"github.com/twpayne/go-geom/encoding/wkb"
 )
 
 type Gender int
@@ -49,11 +51,18 @@ type User struct {
 	Location     Location `json:"location"`
 }
 
+// UserDistance user model with a the distance attribute
+type UserDistance struct {
+	User
+	Distance float64 `json:"distance"`
+}
+
 type UserProfile struct {
-	ID     int    `json:"id"`
-	Name   string `json:"name"`
-	Gender string `json:"gender"`
-	Age    int    `json:"age"`
+	ID             int     `json:"id"`
+	Name           string  `json:"name"`
+	Gender         string  `json:"gender"`
+	Age            int     `json:"age"`
+	DistanceFromMe float64 `json:"distanceFromMe"`
 }
 
 // See https://gorm.io/docs/create.html#Create-From-SQL-Expression-x2F-Context-Valuer for more details
@@ -63,11 +72,34 @@ type Location struct {
 	X, Y float64
 }
 
-// Scan implements the sql.Scanner interface
+// Scan implements the sql.Scanner interface.
+//
+// Receive raw bytes from the sql driver which represents the value. The value
+// is prefixed with prefix (well known text), which is followed by the coordinates.
+// See https://stackoverflow.com/questions/60520863/working-with-spatial-data-with-gorm-and-mysql
+// and https://dev.mysql.com/doc/refman/8.0/en/gis-data-formats.html for more details.
 func (loc *Location) Scan(v interface{}) error {
-	// Scan a value into struct from database driver
-	fmt.Println(fmt.Sprintf("%+v", v))
-	return errors.New("oh no!")
+	if v == nil {
+		return nil
+	}
+
+	mysqlEncoding, ok := v.([]byte)
+	if !ok {
+		return fmt.Errorf("did not scan: expected []byte but was %T", v)
+	}
+
+	var srid uint32 = binary.LittleEndian.Uint32(mysqlEncoding[0:4])
+
+	var point wkb.Point
+	if err := point.Scan(mysqlEncoding[4:]); err != nil {
+		return err
+	}
+
+	point.SetSRID(int(srid))
+	loc.X = point.Point.X()
+	loc.Y = point.Point.Y()
+
+	return nil
 }
 
 func (loc Location) GormDataType() string {
