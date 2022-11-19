@@ -66,6 +66,7 @@ func (u *UserController) CreateUser(c echo.Context) error {
 		Name:         fmt.Sprintf("%s %s", firstName, lastName),
 		Gender:       gender,
 		Age:          age,
+		Location:     domain.Location{X: randomdata.Decimal(-90, 90), Y: randomdata.Decimal(-180, 180)},
 	}
 
 	err = u.Database.CreateUser(u.Ctx, user)
