@@ -2,6 +2,8 @@ package httpDomain
 
 import "github.com/markwallsgrove/muzz_devops/src/models/domain"
 
+// Models used to response to a HTTP query
+
 type UserResult struct {
 	Result User `json:"result"`
 }
