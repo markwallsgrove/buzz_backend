@@ -67,7 +67,7 @@ func TestUsersRoute(t *testing.T) {
 	assert.Equal(t, user.Age, result.Age)
 	assert.Equal(t, user.Email, result.Email)
 	assert.Equal(t, user.Name, result.Name)
-	assert.Equal(t, "Female", result.Gender)
+	assert.Equal(t, user.Gender.String(), result.Gender)
 
 	// should not return the hash which was sent to the database
 	assert.NotEmpty(t, result.Password)
