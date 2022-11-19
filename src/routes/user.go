@@ -9,6 +9,7 @@ import (
 	randomdata "github.com/Pallinder/go-randomdata"
 	echo "github.com/labstack/echo/v4"
 	"github.com/markwallsgrove/muzz_devops/src/database"
+	"github.com/markwallsgrove/muzz_devops/src/models"
 	"github.com/markwallsgrove/muzz_devops/src/models/domain"
 	"github.com/markwallsgrove/muzz_devops/src/models/httpDomain"
 	"github.com/markwallsgrove/muzz_devops/src/models/security"
@@ -107,31 +108,18 @@ func (u *UserController) Profiles(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 
-	user, err := u.Database.GetUser(u.Ctx, uid)
-	if err == database.ErrNotFound {
-		return c.String(http.StatusNotFound, "user not found")
-	}
-	if err != nil {
-		u.Logger.Error("cannot find user for profiles", zap.Error(err))
-		return c.String(http.StatusInternalServerError, "internal server error")
-	}
-
-	gender := domain.Female
-	if user.Gender == domain.Female {
-		gender = domain.Male
+	var genders []domain.Gender
+	gender := domain.StringToGender(c.QueryParam("gender"))
+	if gender == domain.UnknownGender {
+		genders = domain.Genders
+	} else {
+		genders = []domain.Gender{gender}
 	}
 
-	minAge := user.Age - 5
-	if minAge < 13 {
-		minAge = 13
-	}
+	minAge := models.StringToInt(c.QueryParam("minAge"), 0)
+	maxAge := models.StringToInt(c.QueryParam("maxAge"), 200)
 
-	maxAge := user.Age + 5
-	if maxAge > 100 {
-		maxAge = 100
-	}
-
-	userProfiles, err := u.Database.FindMatches(u.Ctx, uid, domain.Gender(gender), minAge, maxAge)
+	userProfiles, err := u.Database.FindMatches(u.Ctx, uid, genders, minAge, maxAge)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}

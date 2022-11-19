@@ -19,7 +19,7 @@ type Database interface {
 	FindMatches(
 		ctx context.Context,
 		currentUserId int,
-		gender domain.Gender,
+		gender []domain.Gender,
 		minAge int,
 		maxAge int,
 	) ([]domain.UserProfile, error)
@@ -91,14 +91,14 @@ func (d *MariaDB) GetUser(ctx context.Context, id int) (domain.User, error) {
 func (d *MariaDB) FindMatches(
 	ctx context.Context,
 	currentUserId int,
-	gender domain.Gender,
+	genders []domain.Gender,
 	minAge int,
 	maxAge int,
 ) ([]domain.UserProfile, error) {
-	var profiles []domain.UserProfile
+	var users []domain.User
 
 	results := d.db.Raw(
-		"SELECT * FROM dating.users u WHERE u.id != ? AND u.id NOT IN (? UNION ?)",
+		"SELECT * FROM dating.users u WHERE u.id != ? AND u.id NOT IN (? UNION ?) AND u.gender IN ? AND u.age >= ? AND u.age <= ?",
 		currentUserId,
 		d.db.
 			Table("dating.swipes s1").
@@ -108,10 +108,23 @@ func (d *MariaDB) FindMatches(
 			Table("dating.swipes s2").
 			Select("s2.first_user_id as id").
 			Where("s2.second_user_id = ? AND s2.second_user_swiped = TRUE", currentUserId),
-	).Scan(&profiles)
+		genders,
+		minAge,
+		maxAge,
+	).Scan(&users)
 
 	if results.Error != nil {
 		return []domain.UserProfile{}, results.Error
+	}
+
+	profiles := make([]domain.UserProfile, len(users))
+	for i, user := range users {
+		profiles[i] = domain.UserProfile{
+			ID:     user.ID,
+			Name:   user.Name,
+			Gender: user.Gender.String(),
+			Age:    user.Age,
+		}
 	}
 
 	return profiles, nil
