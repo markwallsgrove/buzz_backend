@@ -43,13 +43,13 @@ func (_m *Database) CreateUser(ctx context.Context, user *domain.User) error {
 	return r0
 }
 
-// FindMatches provides a mock function with given fields: ctx, currentUserId, gender, minAge, maxAge
-func (_m *Database) FindMatches(ctx context.Context, currentUserId int, gender domain.Gender, minAge int, maxAge int) ([]domain.UserProfile, error) {
-	ret := _m.Called(ctx, currentUserId, gender, minAge, maxAge)
+// FindMatches provides a mock function with given fields: ctx, user, gender, minAge, maxAge
+func (_m *Database) FindMatches(ctx context.Context, user *domain.User, gender []domain.Gender, minAge int, maxAge int) ([]domain.UserProfile, error) {
+	ret := _m.Called(ctx, user, gender, minAge, maxAge)
 
 	var r0 []domain.UserProfile
-	if rf, ok := ret.Get(0).(func(context.Context, int, domain.Gender, int, int) []domain.UserProfile); ok {
-		r0 = rf(ctx, currentUserId, gender, minAge, maxAge)
+	if rf, ok := ret.Get(0).(func(context.Context, *domain.User, []domain.Gender, int, int) []domain.UserProfile); ok {
+		r0 = rf(ctx, user, gender, minAge, maxAge)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]domain.UserProfile)
@@ -57,8 +57,8 @@ func (_m *Database) FindMatches(ctx context.Context, currentUserId int, gender d
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, int, domain.Gender, int, int) error); ok {
-		r1 = rf(ctx, currentUserId, gender, minAge, maxAge)
+	if rf, ok := ret.Get(1).(func(context.Context, *domain.User, []domain.Gender, int, int) error); ok {
+		r1 = rf(ctx, user, gender, minAge, maxAge)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -108,16 +108,16 @@ func (_m *Database) GetUser(ctx context.Context, id int) (domain.User, error) {
 	return r0, r1
 }
 
-// GetUserPasswordHash provides a mock function with given fields: ctx, email
-func (_m *Database) GetUserPasswordHash(ctx context.Context, email string) ([]byte, error) {
+// GetUserByEmail provides a mock function with given fields: ctx, email
+func (_m *Database) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	ret := _m.Called(ctx, email)
 
-	var r0 []byte
-	if rf, ok := ret.Get(0).(func(context.Context, string) []byte); ok {
+	var r0 *domain.User
+	if rf, ok := ret.Get(0).(func(context.Context, string) *domain.User); ok {
 		r0 = rf(ctx, email)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]byte)
+			r0 = ret.Get(0).(*domain.User)
 		}
 	}
 

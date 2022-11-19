@@ -106,6 +106,7 @@ func (u *UserController) Profiles(c echo.Context) error {
 	uid, ok := c.Get("userId").(int)
 	if !ok {
 		u.Logger.Error("cannot find user id within context")
+		fmt.Println("user id")
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 
@@ -116,6 +117,7 @@ func (u *UserController) Profiles(c echo.Context) error {
 	}
 	if err != nil {
 		u.Logger.Error("error attempting to find user", zap.Error(err))
+		fmt.Println("find user")
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 
@@ -132,6 +134,7 @@ func (u *UserController) Profiles(c echo.Context) error {
 
 	userProfiles, err := u.Database.FindMatches(u.Ctx, &user, genders, minAge, maxAge)
 	if err != nil {
+		fmt.Println("find matches")
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 

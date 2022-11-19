@@ -95,7 +95,7 @@ func TestUsersProfiles(t *testing.T) {
 		{
 			ID:     1,
 			Name:   "Ann Thompson",
-			Gender: domain.Female,
+			Gender: domain.Gender(domain.Female).String(),
 			Age:    17,
 		},
 	}
@@ -109,10 +109,10 @@ func TestUsersProfiles(t *testing.T) {
 	db.On(
 		"FindMatches",
 		mock.AnythingOfType("*context.emptyCtx"),
-		9,
-		domain.Gender(domain.Female),
-		15,
-		25,
+		&user,
+		domain.Genders,
+		0,
+		200,
 	).Return(profiles, nil)
 
 	users := routes.UserController{
@@ -121,8 +121,10 @@ func TestUsersProfiles(t *testing.T) {
 		context.Background(),
 	}
 
+	c.Set("userId", 9)
+
 	assert.NoError(t, users.Profiles(c))
-	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, http.StatusOK, rec.Code, rec.Body)
 
 	// check how the GetUser call to the database was called
 	call := db.Calls[0]
@@ -132,10 +134,6 @@ func TestUsersProfiles(t *testing.T) {
 	// check how the FindMatches call to the database was called
 	call = db.Calls[1]
 	assert.Equal(t, "FindMatches", call.Method)
-	assert.Equal(t, 9, call.Arguments.Get(1))
-	assert.Equal(t, domain.Gender(domain.Female), call.Arguments.Get(2))
-	assert.Equal(t, 15, call.Arguments.Get(3))
-	assert.Equal(t, 25, call.Arguments.Get(4))
 }
 
 func TestSwipe(t *testing.T) {
@@ -164,6 +162,7 @@ func TestSwipe(t *testing.T) {
 		context.Background(),
 	}
 
+	c.Set("userId", 9)
 	assert.NoError(t, users.Swipe(c))
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -200,6 +199,7 @@ func TestSwipeMatched(t *testing.T) {
 		context.Background(),
 	}
 
+	c.Set("userId", 9)
 	assert.NoError(t, users.Swipe(c))
 	assert.Equal(t, http.StatusOK, rec.Code)
 
