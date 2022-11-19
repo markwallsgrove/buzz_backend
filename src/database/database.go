@@ -98,7 +98,14 @@ func (d *MariaDB) FindMatches(
 	var users []domain.UserDistance
 
 	results := d.db.Raw(
-		"SELECT *, ST_DISTANCE(u.location, POINT(?, ?)) as distance FROM dating.users u WHERE u.id != ? AND u.id NOT IN (? UNION ?) AND u.gender IN ? AND u.age >= ? AND u.age <= ? ORDER by distance ASC",
+		"SELECT *, ST_DISTANCE(u.location, POINT(?, ?)) as distance "+
+			"FROM dating.users u "+
+			"LEFT JOIN attractiveness a "+
+			"ON u.id = a.user_id "+
+			"WHERE "+
+			"u.id != ? AND u.id NOT IN (? UNION ?) "+
+			"AND u.gender IN ? AND u.age >= ? AND u.age <= ? "+
+			"ORDER BY distance ASC, a.count DESC",
 		user.Location.X,
 		user.Location.Y,
 		user.ID,
