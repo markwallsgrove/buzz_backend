@@ -33,10 +33,10 @@ type Database interface {
 		firstUserId int,
 		secondUserId int,
 	) (domain.Swipe, error)
-	GetUserPasswordHash(
+	GetUserByEmail(
 		ctx context.Context,
 		email string,
-	) ([]byte, error)
+	) (*domain.User, error)
 	Close() error
 }
 
@@ -196,25 +196,14 @@ func (d *MariaDB) GetSwipe(
 	return swipe, nil
 }
 
-// GetPasswordHash retrieve the password hash related to a user
-func (d *MariaDB) GetUserPasswordHash(ctx context.Context, email string) ([]byte, error) {
-	var passwords [][]byte
-
-	result := d.db.
-		Table("users").
-		Where("email = ?", email).
-		Pluck("password_hash", &passwords)
-
-	if result.Error != nil {
-		d.Logger.Error("cannot find user", zap.Error(result.Error))
-		return []byte{}, result.Error
+// GetUserByEmail Load a user's details by their email address
+func (d *MariaDB) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+	var user *domain.User
+	if err := d.db.First(&user, "email = ?", email).Error; err != nil {
+		return nil, err
 	}
 
-	if result.RowsAffected != 1 || len(passwords) != 1 {
-		return []byte{}, ErrNotFound
-	}
-
-	return passwords[0], nil
+	return user, nil
 }
 
 func (d *MariaDB) Close() error {

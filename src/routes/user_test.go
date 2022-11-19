@@ -56,7 +56,7 @@ func TestUsersRoute(t *testing.T) {
 	assert.LessOrEqual(t, user.Age, 100)
 	assert.NotEmpty(t, user.Email)
 	assert.NotEmpty(t, user.Name)
-	assert.NotEmpty(t, user.Password)
+	assert.NotEmpty(t, user.PasswordHash)
 	assert.GreaterOrEqual(t, user.Gender, domain.UnknownGender)
 
 	// Check the user data that was encoded in the HTTP response body

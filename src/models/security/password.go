@@ -6,7 +6,6 @@ import (
 	"crypto/subtle"
 	"encoding/gob"
 	"errors"
-	"fmt"
 
 	"github.com/sethvargo/go-password/password"
 	"golang.org/x/crypto/argon2"
@@ -78,7 +77,6 @@ func createArgon2IdKeyHash(
 	keyLen uint32,
 	salt []byte,
 ) *PasswordHash {
-	fmt.Println(password, []byte(password))
 	hash := argon2.IDKey(
 		[]byte(password),
 		salt,
@@ -122,9 +120,6 @@ func VerifyPasswordHash(password string, hash []byte) error {
 		passwordHash.KeyLen,
 		passwordHash.Salt,
 	)
-
-	fmt.Printf("%+v", passwordHashToCheck)
-	fmt.Printf("%+v", passwordHash)
 
 	if subtle.ConstantTimeCompare(passwordHash.Hash, passwordHashToCheck.Hash) == 0 {
 		return ErrInvalidPassword

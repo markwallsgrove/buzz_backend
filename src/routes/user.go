@@ -92,9 +92,6 @@ func (u *UserController) CreateUser(c echo.Context) error {
 
 // Profiles fetch profiles that are matched to the current user.
 //
-// Query Params:
-//   - userId (must be numeric)
-//
 // Status codes:
 //   - 404 user was not found
 //   - 500 internal server error
@@ -104,9 +101,10 @@ func (u *UserController) CreateUser(c echo.Context) error {
 // All matches will be within five years of the current user's age, unless
 // the value is below 13 or above 100.
 func (u *UserController) Profiles(c echo.Context) error {
-	uid, err := strconv.Atoi(c.QueryParam("userId"))
-	if err != nil {
-		return c.String(http.StatusBadRequest, "current user is not numeric")
+	uid, ok := c.Get("userId").(int)
+	if !ok {
+		u.Logger.Error("cannot find user id within context")
+		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 
 	user, err := u.Database.GetUser(u.Ctx, uid)
@@ -144,16 +142,16 @@ func (u *UserController) Profiles(c echo.Context) error {
 // Create a swipe between two users. The swipe will contain who swiped.
 //
 // Query Params:
-//   - currentUser the user who is swiping
 //   - targetUser who the user has swiped
 //
 // Status codes:
 //   - 500 internal server error
 //   - 200 success
 func (u *UserController) Swipe(c echo.Context) error {
-	currentUserId, err := strconv.Atoi(c.QueryParam("currentUser"))
-	if err != nil {
-		return c.String(http.StatusBadRequest, "current user is not numeric")
+	currentUserId, ok := c.Get("userId").(int)
+	if !ok {
+		u.Logger.Error("cannot find user id within context")
+		return c.String(http.StatusBadRequest, "internal server error")
 	}
 
 	targetUserId, err := strconv.Atoi(c.QueryParam("targetUser"))

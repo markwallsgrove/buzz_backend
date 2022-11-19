@@ -2,7 +2,6 @@ package routes
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	echo "github.com/labstack/echo/v4"
@@ -33,9 +32,8 @@ func (i *LoginController) Login(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid payload")
 	}
 
-	hash, err := i.Database.GetUserPasswordHash(i.Ctx, payload.Email)
+	user, err := i.Database.GetUserByEmail(i.Ctx, payload.Email)
 	if err == database.ErrNotFound {
-		fmt.Println("cannot find hash")
 		return c.String(http.StatusForbidden, "unknown email address or incorrect password")
 	}
 	if err != nil {
@@ -43,9 +41,8 @@ func (i *LoginController) Login(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 
-	err = security.VerifyPasswordHash(payload.Password, hash)
+	err = security.VerifyPasswordHash(payload.Password, user.PasswordHash)
 	if err == security.ErrInvalidPassword {
-		fmt.Println("invalid password")
 		return c.String(http.StatusForbidden, "unknown email address or incorrect password")
 	}
 	if err != nil {
@@ -53,7 +50,7 @@ func (i *LoginController) Login(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "internal server error")
 	}
 
-	token, err := security.CreateToken(payload.Email, i.Secret)
+	token, err := security.CreateToken(user.ID, i.Secret)
 	if err != nil {
 		i.Logger.Error("cannot create token", zap.Error(err))
 		return c.String(http.StatusInternalServerError, "internal server error")

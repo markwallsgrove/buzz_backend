@@ -7,6 +7,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/markwallsgrove/muzz_devops/src/database"
+	"github.com/markwallsgrove/muzz_devops/src/middleware"
 	"github.com/markwallsgrove/muzz_devops/src/routes"
 	"go.uber.org/zap"
 )
@@ -23,6 +24,9 @@ func main() {
 		panic(err)
 	}
 
+	// TODO: use environment variables or Vault for secrets
+	secret := "signing secret"
+
 	// Setup the controllers
 	ctx, close := context.WithCancel(context.Background())
 	u := routes.NewUserController(ctx, db, logger)
@@ -31,15 +35,20 @@ func main() {
 		Ctx:      ctx,
 		Database: db,
 		Logger:   logger,
-		Secret:   "token secret",
+		Secret:   secret,
+	}
+
+	auth := middleware.JWTAuth{
+		DB:     db,
+		Secret: secret,
 	}
 
 	// Register the handlers with echo
 	e := echo.New()
 	e.GET("/", i.Index)
 	e.POST("/user/create", u.CreateUser)
-	e.GET("/profiles", u.Profiles)
-	e.POST("/swipe", u.Swipe)
+	e.GET("/profiles", u.Profiles, auth.Process)
+	e.POST("/swipe", u.Swipe, auth.Process)
 	e.POST("/login", l.Login)
 
 	// Handle any signals to close the application. The connection to the database
