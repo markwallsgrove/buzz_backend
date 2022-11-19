@@ -6,7 +6,8 @@ services:
         depends_on:
             - mariadb
         environment:
-            - "dsn=root:rootrootroot@tcp(mariadb:3306)/dating"
+            - "DSN=root:rootrootroot@tcp(mariadb:3306)/dating"
+            - "SIGNING_SECRET=signing secret"
     mariadb:
         image: mariadb:10.4
         ports:

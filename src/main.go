@@ -18,14 +18,13 @@ func main() {
 		panic(err)
 	}
 
-	dsn := os.Getenv("dsn")
+	dsn := os.Getenv("DSN")
 	db, err := database.NewMariaDB(dsn, logger)
 	if err != nil {
 		panic(err)
 	}
 
-	// TODO: use environment variables or Vault for secrets
-	secret := "signing secret"
+	secret := os.Getenv("SIGNING_SECRET")
 
 	// Setup the controllers
 	ctx, close := context.WithCancel(context.Background())
