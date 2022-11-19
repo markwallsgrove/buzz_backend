@@ -222,8 +222,14 @@ func (d *MariaDB) GetSwipe(
 // GetUserByEmail Load a user's details by their email address
 func (d *MariaDB) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var user *domain.User
-	if err := d.db.First(&user, "email = ?", email).Error; err != nil {
+
+	result := d.db.First(&user, "email = ?", email)
+	if err := result.Error; err != nil {
 		return nil, err
+	}
+
+	if result.RowsAffected == 0 {
+		return nil, ErrNotFound
 	}
 
 	return user, nil
